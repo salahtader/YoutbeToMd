@@ -5,8 +5,9 @@ const ytdl = require("ytdl-core");
 const ffmpeg = require("fluent-ffmpeg");
 const ffmpegPath = require("ffmpeg-static");
 const { structureText } = require("./textStructure");
+require('dotenv').config();
 
-async function main(videoId, langue, apiKey, GoogleAPIKEY, prompt) {
+async function main(videoId, langue, ASSEMBLYAI_API_KEY, GOOGLE_API_KEY, prompt) {
   const audioDir = path.join(__dirname, "audio");
   const txtDir = path.join(__dirname, "txt");
   const imgDir = path.join(__dirname, "img");
@@ -45,7 +46,7 @@ async function main(videoId, langue, apiKey, GoogleAPIKEY, prompt) {
     }
   }
 
-  async function uploadAudio(filePath, apiKey) {
+  async function uploadAudio(filePath, ASSEMBLYAI_API_KEY) {
     try {
       const audioData = fs.readFileSync(filePath);
       const response = await axios.post(
@@ -53,7 +54,7 @@ async function main(videoId, langue, apiKey, GoogleAPIKEY, prompt) {
         audioData,
         {
           headers: {
-            authorization: apiKey,
+            authorization: ASSEMBLYAI_API_KEY,
             "content-type": "application/octet-stream",
           },
         }
@@ -64,7 +65,7 @@ async function main(videoId, langue, apiKey, GoogleAPIKEY, prompt) {
     }
   }
 
-  async function transcribeAudio(audioUrl, apiKey) {
+  async function transcribeAudio(audioUrl, ASSEMBLYAI_API_KEY) {
     try {
       const response = await axios.post(
         "https://api.assemblyai.com/v2/transcript",
@@ -77,7 +78,7 @@ async function main(videoId, langue, apiKey, GoogleAPIKEY, prompt) {
           speaker_labels: true,
         },
         {
-          headers: { authorization: apiKey },
+          headers: { authorization: ASSEMBLYAI_API_KEY },
         }
       );
       return response.data.id;
@@ -86,14 +87,14 @@ async function main(videoId, langue, apiKey, GoogleAPIKEY, prompt) {
     }
   }
 
-  async function getTranscriptionResult(transcriptionId, apiKey) {
+  async function getTranscriptionResult(transcriptionId, ASSEMBLYAI_API_KEY) {
     try {
       while (true) {
         const response = await axios.get(
           `https://api.assemblyai.com/v2/transcript/${transcriptionId}`,
           {
             headers: {
-              authorization: apiKey,
+              authorization: ASSEMBLYAI_API_KEY,
               "content-type": "application/json",
             },
           }
@@ -165,15 +166,15 @@ async function main(videoId, langue, apiKey, GoogleAPIKEY, prompt) {
     console.log("Thumbnail downloaded.");
 
     console.log("Uploading audio to AssemblyAI...");
-    const audioUrl = await uploadAudio(audioFilePath, apiKey);
+    const audioUrl = await uploadAudio(audioFilePath, ASSEMBLYAI_API_KEY);
     console.log("Audio uploaded.");
 
     console.log("Requesting transcription...");
-    const transcriptionId = await transcribeAudio(audioUrl, apiKey);
+    const transcriptionId = await transcribeAudio(audioUrl, ASSEMBLYAI_API_KEY);
     console.log("Transcription requested.");
 
     console.log("Getting transcription result...");
-    const transcriptionText = await getTranscriptionResult(transcriptionId, apiKey);
+    const transcriptionText = await getTranscriptionResult(transcriptionId, ASSEMBLYAI_API_KEY);
     if (transcriptionText) {
       getYouTubeVideoInfo(videoId).then(async (videoInfoArray) => {
         if (videoInfoArray) {
@@ -183,7 +184,7 @@ async function main(videoId, langue, apiKey, GoogleAPIKEY, prompt) {
             const structuredText = await structureText(
               transcriptionText,
               langue,
-              GoogleAPIKEY,
+              GOOGLE_API_KEY,
               prompt
             );
             console.log("Generating structured text...");
@@ -204,11 +205,12 @@ async function main(videoId, langue, apiKey, GoogleAPIKEY, prompt) {
 
 // Example usage
 const formData = {
-  videoId: "your_video_id",
-  langue: "en",
-  apiKey: "your_assemblyai_api_key",
-  GoogleAPIKEY: "your_google_api_key",
-  prompt: "your_prompt",
+  videoId: "qRjcuuY59KU",
+  langue: "french",
+  ASSEMBLYAI_API_KEY: process.env.ASSEMBLYAI_API_KEY,
+  GOOGLE_API_KEY: process.env.GOOGLE_API_KEY,
+  prompt: "Objectif : Créez une table des matières pour organiser les sections principales du tutoriel. Incluez les titres et sous-titres pertinents pour chaque étape importante"
+  //Traduire la transcription suivante d'une vidéo tutoriel de la langue source vers le français. La traduction doit être détaillée, complète et bien structurée.",//"your_prompt",
 };
 
-main(formData.videoId, formData.langue, formData.apiKey, formData.GoogleAPIKEY, formData.prompt);
+main(formData.videoId, formData.langue, formData.ASSEMBLYAI_API_KEY, formData.GOOGLE_API_KEY, formData.prompt);
